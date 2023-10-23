@@ -207,7 +207,7 @@ func (app *application) listMoviesHandler(w http.ResponseWriter, r *http.Request
 		app.serverErrorResponse(w, r, err)
 		return
 	}
-	
+
 	// Include the metadata in the response envelope.
 	err = app.writeJSON(w, http.StatusOK, envelope{"movies": movies, "metadata": metadata}, nil)
 	if err != nil {
