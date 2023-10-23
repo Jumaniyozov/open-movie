@@ -8,6 +8,7 @@ import (
 	"open-movie/internal/data"
 	"open-movie/internal/mailer"
 	"os"
+	"strings"
 	"sync"
 	"time"
 	// Import the pq driver so that it can register itself with the database/sql
@@ -18,7 +19,6 @@ import (
 
 const version = "1.0.0"
 
-// Update the config struct to hold the SMTP server settings.
 type config struct {
 	port int
 	env  string
@@ -39,6 +39,10 @@ type config struct {
 		username string
 		password string
 		sender   string
+	}
+	// Add a cors struct and trustedOrigins field with the type []string.
+	cors struct {
+		trustedOrigins []string
 	}
 }
 
@@ -61,16 +65,23 @@ func main() {
 	flag.BoolVar(&cfg.limiter.enabled, "limiter-enabled", true, "Enable rate limiter")
 	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum requests per second")
 	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
-	// Read the SMTP server configuration settings into the config struct, using the
-	// Mailtrap settings as the default values. IMPORTANT: If you're following along,
-	// make sure to replace the default values for smtp-username and smtp-password
-	// with your own Mailtrap credentials.
 	flag.StringVar(&cfg.smtp.host, "smtp-host", "sandbox.smtp.mailtrap.io", "SMTP host")
 	flag.IntVar(&cfg.smtp.port, "smtp-port", 25, "SMTP port")
-	flag.StringVar(&cfg.smtp.username, "smtp-username", "7ab38a303df7df", "SMTP username")
-	flag.StringVar(&cfg.smtp.password, "smtp-password", "5ac4d63a7c3fd2", "SMTP password")
-	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Greenlight <no-reply@housing.net>", "SMTP sender")
+	flag.StringVar(&cfg.smtp.username, "smtp-username", "a7420fc0883489", "SMTP username")
+	flag.StringVar(&cfg.smtp.password, "smtp-password", "e75ffd0a3aa5ec", "SMTP password")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Greenlight <no-reply@greenlight.alexedwards.net>", "SMTP sender")
+	// Use the flag.Func() function to process the -cors-trusted-origins command line
+	// flag. In this we use the strings.Fields() function to split the flag value into a
+	// slice based on whitespace characters and assign it to our config struct.
+	// Importantly, if the -cors-trusted-origins flag is not present, contains the empty
+	// string, or contains only whitespace, then strings.Fields() will return an empty
+	// []string slice.
+	flag.Func("cors-trusted-origins", "Trusted CORS origins (space separated)", func(val string) error {
+		cfg.cors.trustedOrigins = strings.Fields(val)
+		return nil
+	})
 	flag.Parse()
+
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	db, err := openDB(cfg)
