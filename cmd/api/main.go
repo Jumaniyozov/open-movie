@@ -5,9 +5,11 @@ import (
 	"database/sql" // New import
 	"expvar"
 	"flag"
+	"fmt"
 	"log/slog"
 	"open-movie/internal/data"
 	"open-movie/internal/mailer"
+	"open-movie/internal/vcs"
 	"os"
 	"runtime"
 	"strings"
@@ -19,7 +21,9 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const version = "1.0.0"
+var (
+	version = vcs.Version()
+)
 
 type config struct {
 	port int
@@ -72,17 +76,19 @@ func main() {
 	flag.StringVar(&cfg.smtp.username, "smtp-username", "a7420fc0883489", "SMTP username")
 	flag.StringVar(&cfg.smtp.password, "smtp-password", "e75ffd0a3aa5ec", "SMTP password")
 	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Greenlight <no-reply@greenlight.alexedwards.net>", "SMTP sender")
-	// Use the flag.Func() function to process the -cors-trusted-origins command line
-	// flag. In this we use the strings.Fields() function to split the flag value into a
-	// slice based on whitespace characters and assign it to our config struct.
-	// Importantly, if the -cors-trusted-origins flag is not present, contains the empty
-	// string, or contains only whitespace, then strings.Fields() will return an empty
-	// []string slice.
 	flag.Func("cors-trusted-origins", "Trusted CORS origins (space separated)", func(val string) error {
 		cfg.cors.trustedOrigins = strings.Fields(val)
 		return nil
 	})
+	// Create a new version boolean flag with the default value of false.
+	displayVersion := flag.Bool("version", false, "Display version and exit")
 	flag.Parse()
+	// If the version flag value is true, then print out the version number and
+	// immediately exit.
+	if *displayVersion {
+		fmt.Printf("Version:\t%s\n", version)
+		os.Exit(0)
+	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
